@@ -1,0 +1,194 @@
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.creator
+*.creator.user
+*.creator.user.*
+*.qmlc
+*.jom
+*.autosave
+
+# Qt Build System
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+!CMakeLists.txt
+build/
+build-*/
+.cmake/
+
+# Compiled Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Qt MOC
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.moc
+
+# Qt RCC
+*.rcc
+
+# Qt QML
+*.qmlc
+*.jsc
+
+# Qt Creator Qml
+*.qmlproject.user
+*.qmlproject.user.*
+
+# Qt Creator CMake
+CMakeLists.txt.user
+*.cmake.user
+
+# Qt Creator Local Machine Specific Files
+*.local
+
+# Qt Creator Session Files
+*.session
+
+# Qt Creator IDE Settings
+.qtcreator/
+.qtcreatorrc
+
+# Qt Creator Build Artifacts
+*.autosave
+*.creator.user
+
+# Qt Creator Project Files
+*.pro.user.*
+*.creator.user.*
+
+# QML Type Information
+*.qmltypes
+qmldir
+
+# QML Module Cache
+.qmlcache/
+
+# Qt Meta Object Compiler
+*.moc
+
+# Qt Resource Compiler
+qrc_*.cpp
+
+# Qt UI Compiler
+ui_*.h
+
+# Qt Designer
+*.ui.bak
+
+# Qt Linguist
+*.qm
+*.ts
+
+# Qt Installer Framework
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Qt Test
+testresults.xml
+
+# Qt Creator Autosave
+*.autosave
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+
+# IDE - CLion
+.idea/
+cmake-build-*/
+
+# IDE - Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Release files
+*.release
+*.release_debug
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+*~
+
+# Ninja build files
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+
+# QML Module Files (generated)
+**/qmldir
+**/*.qmltypes
+
+# Meta types
+meta_types/
+*.json.gen
+
+# Foreign types
+qmltypes/
+
