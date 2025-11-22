@@ -7,6 +7,24 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
+// Static member definitions for shared state across all parser instances
+QMutex MqttParserWorker::s_stateMutex;
+float MqttParserWorker::s_speed = 0.0f;
+int MqttParserWorker::s_rpm = 0;
+int MqttParserWorker::s_accPedal = 0;
+int MqttParserWorker::s_brakePedal = 0;
+double MqttParserWorker::s_encoderAngle = 0.0;
+float MqttParserWorker::s_temperature = 0.0f;
+int MqttParserWorker::s_batteryLevel = 0;
+double MqttParserWorker::s_gpsLongitude = 0.0;
+double MqttParserWorker::s_gpsLatitude = 0.0;
+int MqttParserWorker::s_speedFL = 0;
+int MqttParserWorker::s_speedFR = 0;
+int MqttParserWorker::s_speedBL = 0;
+int MqttParserWorker::s_speedBR = 0;
+double MqttParserWorker::s_lateralG = 0.0;
+double MqttParserWorker::s_longitudinalG = 0.0;
+
 MqttParserWorker::MqttParserWorker(bool debugMode, QObject *parent)
     : QObject(parent),
     m_debugMode(debugMode),
@@ -109,32 +127,21 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         uint32_t canId = CANDecoder::extractCANId(message);
         QByteArray payload = CANDecoder::extractPayload(message);
         
-        // Initialize default values
-        float speed = 0.0f;
-        int rpm = 0;
-        int accPedal = 0;
-        int brakePedal = 0;
-        double encoderAngle = 0.0;
-        float temperature = 0.0f;
-        int batteryLevel = 0;
-        double gpsLongitude = 0.0;
-        double gpsLatitude = 0.0;
-        int speedFL = 0;
-        int speedFR = 0;
-        int speedBL = 0;
-        int speedBR = 0;
-        double lateralG = 0.0;
-        double longitudinalG = 0.0;
-        
         bool shouldEmit = false;
         
-        // Decode based on CAN ID
+        // Decode based on CAN ID and update only the relevant values
+        // Use shared static state so all parser instances share the same values
+        QMutexLocker locker(&s_stateMutex);
+        
         switch (canId)
         {
         case CANDecoder::CAN_ID_IMU_ANGLE: // 0x071
         {
             auto imuAngle = CANDecoder::decodeIMUAngle(payload);
             AsyncLogger::instance().logIMU(imuAngle.ang_x, imuAngle.ang_y, imuAngle.ang_z);
+            if (m_debugMode) {
+                qDebug() << "MqttParserWorker: Logged IMU data - X:" << imuAngle.ang_x << "Y:" << imuAngle.ang_y << "Z:" << imuAngle.ang_z;
+            }
             // Log only, no GUI update
             break;
         }
@@ -142,8 +149,8 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         case CANDecoder::CAN_ID_IMU_ACCEL: // 0x072
         {
             auto imuAccel = CANDecoder::decodeIMUAccel(payload);
-            lateralG = imuAccel.lateral_g;
-            longitudinalG = imuAccel.longitudinal_g;
+            s_lateralG = imuAccel.lateral_g;
+            s_longitudinalG = imuAccel.longitudinal_g;
             shouldEmit = true;
             break;
         }
@@ -151,9 +158,12 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         case CANDecoder::CAN_ID_ADC: // 0x073
         {
             auto adc = CANDecoder::decodeADC(payload);
-            accPedal = adc.acc_pedal;
-            brakePedal = adc.brake_pedal;
+            s_accPedal = adc.acc_pedal;
+            s_brakePedal = adc.brake_pedal;
             AsyncLogger::instance().logSuspension(adc.sus_1, adc.sus_2, adc.sus_3, adc.sus_4);
+            if (m_debugMode) {
+                qDebug() << "MqttParserWorker: Logged Suspension data - SUS:" << adc.sus_1 << adc.sus_2 << adc.sus_3 << adc.sus_4;
+            }
             shouldEmit = true;
             break;
         }
@@ -161,12 +171,12 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         case CANDecoder::CAN_ID_PROXIMITY_ENCODER: // 0x074
         {
             auto prox = CANDecoder::decodeProximityAndEncoder(payload);
-            speed = prox.speed_kmh;
-            speedFL = static_cast<int>(prox.speed_fl);
-            speedFR = static_cast<int>(prox.speed_fr);
-            speedBL = static_cast<int>(prox.speed_bl);
-            speedBR = static_cast<int>(prox.speed_br);
-            encoderAngle = prox.encoder_angle;
+            s_speed = static_cast<float>(prox.speed_kmh);
+            s_speedFL = static_cast<int>(prox.speed_fl);
+            s_speedFR = static_cast<int>(prox.speed_fr);
+            s_speedBL = static_cast<int>(prox.speed_bl);
+            s_speedBR = static_cast<int>(prox.speed_br);
+            s_encoderAngle = static_cast<double>(prox.encoder_angle);
             shouldEmit = true;
             break;
         }
@@ -174,8 +184,8 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         case CANDecoder::CAN_ID_GPS: // 0x075
         {
             auto gps = CANDecoder::decodeGPS(payload);
-            gpsLongitude = gps.longitude;
-            gpsLatitude = gps.latitude;
+            s_gpsLongitude = static_cast<double>(gps.longitude);
+            s_gpsLatitude = static_cast<double>(gps.latitude);
             shouldEmit = true;
             break;
         }
@@ -184,6 +194,9 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
         {
             auto temps = CANDecoder::decodeTemperatures(payload);
             AsyncLogger::instance().logTemperature(temps.temp_fl, temps.temp_fr, temps.temp_rl, temps.temp_rr);
+            if (m_debugMode) {
+                qDebug() << "MqttParserWorker: Logged Temperature data - FL:" << temps.temp_fl << "FR:" << temps.temp_fr << "RL:" << temps.temp_rl << "RR:" << temps.temp_rr;
+            }
             // Log only, no GUI update
             break;
         }
@@ -193,9 +206,30 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
             return;
         }
         
-        // Emit parsed data if needed
+        // Emit parsed data if needed (using current shared state values)
         if (shouldEmit)
         {
+            // Read all values while mutex is locked to ensure thread-safe access
+            // All values are shared static members, so all parser instances use the same state
+            float speed = s_speed;
+            int rpm = s_rpm;
+            int accPedal = s_accPedal;
+            int brakePedal = s_brakePedal;
+            double encoderAngle = s_encoderAngle;
+            float temperature = s_temperature;
+            int batteryLevel = s_batteryLevel;
+            double gpsLongitude = s_gpsLongitude;
+            double gpsLatitude = s_gpsLatitude;
+            int speedFL = s_speedFL;
+            int speedFR = s_speedFR;
+            int speedBL = s_speedBL;
+            int speedBR = s_speedBR;
+            double lateralG = s_lateralG;
+            double longitudinalG = s_longitudinalG;
+            
+            // Unlock mutex before emitting to avoid blocking during signal emission
+            locker.unlock();
+            
             emit messageParsed(
                 speed, rpm, accPedal, brakePedal,
                 encoderAngle, temperature, batteryLevel,
@@ -206,7 +240,8 @@ void MqttParserWorker::parseMessage(const QByteArray &message)
             if (m_debugMode)
             {
                 qDebug() << "MqttParserWorker: Decoded CAN ID 0x" << QString::number(canId, 16)
-                         << "- Speed:" << speed << "LatG:" << lateralG;
+                         << "- Speed:" << speed << "EncoderAngle:" << encoderAngle << "LatG:" << lateralG
+                         << "AccPedal:" << accPedal << "BrakePedal:" << brakePedal;
             }
         }
     }

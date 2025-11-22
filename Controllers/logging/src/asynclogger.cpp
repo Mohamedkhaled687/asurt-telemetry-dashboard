@@ -83,6 +83,7 @@ void AsyncLogger::shutdown()
 void AsyncLogger::logIMU(int16_t ang_x, int16_t ang_y, int16_t ang_z)
 {
     if (!m_initialized) {
+        qWarning() << "AsyncLogger: Attempted to log IMU data but logger not initialized";
         return;
     }
     
@@ -97,6 +98,7 @@ void AsyncLogger::logIMU(int16_t ang_x, int16_t ang_y, int16_t ang_z)
 void AsyncLogger::logSuspension(uint16_t sus_1, uint16_t sus_2, uint16_t sus_3, uint16_t sus_4)
 {
     if (!m_initialized) {
+        qWarning() << "AsyncLogger: Attempted to log Suspension data but logger not initialized";
         return;
     }
     
@@ -111,6 +113,7 @@ void AsyncLogger::logSuspension(uint16_t sus_1, uint16_t sus_2, uint16_t sus_3, 
 void AsyncLogger::logTemperature(int16_t temp_fl, int16_t temp_fr, int16_t temp_rl, int16_t temp_rr)
 {
     if (!m_initialized) {
+        qWarning() << "AsyncLogger: Attempted to log Temperature data but logger not initialized";
         return;
     }
     
@@ -125,7 +128,8 @@ void AsyncLogger::logTemperature(int16_t temp_fl, int16_t temp_fr, int16_t temp_
 // LoggerWorker implementation
 
 LoggerWorker::LoggerWorker(const QString &logDir)
-    : m_logDirectory(logDir)
+    : m_logDirectory(logDir),
+    m_filesOpen(false)
 {
 }
 
@@ -136,8 +140,12 @@ LoggerWorker::~LoggerWorker()
 
 void LoggerWorker::initialize()
 {
-    if (!openFiles()) {
-        qWarning() << "Failed to open log files";
+    if (openFiles()) {
+        m_filesOpen = true;
+        qDebug() << "LoggerWorker: Log files opened successfully";
+    } else {
+        qWarning() << "LoggerWorker: Failed to open log files";
+        m_filesOpen = false;
     }
 }
 
@@ -206,6 +214,8 @@ void LoggerWorker::closeFiles()
         m_temperatureStream.flush();
         m_temperatureFile.close();
     }
+    
+    m_filesOpen = false;
 }
 
 void LoggerWorker::writeHeader(QTextStream &stream, const QString &header)
@@ -216,6 +226,16 @@ void LoggerWorker::writeHeader(QTextStream &stream, const QString &header)
 
 void LoggerWorker::processEntry(const LogEntry &entry)
 {
+    // Ensure files are open before processing
+    if (!m_filesOpen) {
+        qWarning() << "LoggerWorker: Attempted to log entry but files not open, trying to initialize...";
+        initialize();
+        if (!m_filesOpen) {
+            qWarning() << "LoggerWorker: Failed to open files, entry will be lost";
+            return;
+        }
+    }
+    
     QTextStream *stream = nullptr;
     
     switch (entry.type) {
@@ -233,6 +253,8 @@ void LoggerWorker::processEntry(const LogEntry &entry)
     if (stream) {
         *stream << entry.timestamp << "," << entry.data << "\n";
         stream->flush(); // Ensure data is written immediately
+    } else {
+        qWarning() << "LoggerWorker: Unknown log entry type:" << entry.type;
     }
 }
 

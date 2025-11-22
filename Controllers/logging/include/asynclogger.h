@@ -51,6 +51,7 @@ private:
     QTextStream m_imuStream;
     QTextStream m_suspensionStream;
     QTextStream m_temperatureStream;
+    bool m_filesOpen;
     
     bool openFiles();
     void closeFiles();

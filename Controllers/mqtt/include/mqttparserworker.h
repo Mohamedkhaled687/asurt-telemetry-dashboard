@@ -72,6 +72,25 @@ private:
     QQueue<QByteArray> m_queue;
     QMutex m_queueMutex;
     QWaitCondition m_queueCondition;
+    
+        // Shared state across all parser instances
+    // All values are static so all parser workers share the same state
+    static QMutex s_stateMutex;
+    static float s_speed;
+    static int s_rpm;
+    static int s_accPedal;
+    static int s_brakePedal;
+    static double s_encoderAngle;
+    static float s_temperature;
+    static int s_batteryLevel;
+    static double s_gpsLongitude;
+    static double s_gpsLatitude;
+    static int s_speedFL;
+    static int s_speedFR;
+    static int s_speedBL;
+    static int s_speedBR;
+    static double s_lateralG;
+    static double s_longitudinalG;
 };
 
 #endif // MQTTPARSERWORKER_H
